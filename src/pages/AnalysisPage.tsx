@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import PageShell from '../components/layout/PageShell';
 import RepairInfographic from '../components/analysis/RepairInfographic';
-import ToolsList from '../components/analysis/ToolsList';
-import MaterialsList from '../components/analysis/MaterialsList';
+import ProjectCart from '../components/analysis/ProjectCart';
 import ChatWindow from '../components/chat/ChatWindow';
+import ContractorPreview from '../components/contractors/ContractorPreview';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useAppContext } from '../context/AppContext';
@@ -68,22 +68,24 @@ export default function AnalysisPage() {
         {/* Main content */}
         <div className="lg:col-span-3 space-y-4">
           <RepairInfographic analysis={analysisResult} />
-          <ToolsList tools={analysisResult.tools} />
-          <MaterialsList materials={analysisResult.materials} />
+          <ProjectCart
+            tools={analysisResult.tools}
+            materials={analysisResult.materials}
+            projectTitle={analysisResult.problemTitle}
+          />
 
-          {/* Quick links */}
-          <div className="flex gap-3">
-            <Link to="/videos" className="flex-1">
-              <Button variant="secondary" className="w-full">▶️ Watch Videos</Button>
-            </Link>
-            <Link to="/contractors" className="flex-1">
-              <Button variant="secondary" className="w-full">👷 Find a Pro</Button>
-            </Link>
-          </div>
+          {/* Quick link to videos */}
+          <Link to="/videos">
+            <Button variant="secondary" className="w-full">▶️ Watch Repair Videos</Button>
+          </Link>
         </div>
 
-        {/* Chat sidebar */}
-        <div className="lg:col-span-2">
+        {/* Right sidebar */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Contractor preview */}
+          <ContractorPreview category={analysisResult.category} />
+
+          {/* Chat */}
           <Card className="lg:sticky lg:top-20">
             <ChatWindow
               messages={chatMessages}

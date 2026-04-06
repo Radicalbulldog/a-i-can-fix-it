@@ -37,6 +37,18 @@ export async function searchVideos(query: string): Promise<VideoResult[]> {
   return res.json();
 }
 
+export async function fetchIllustration(stepTitle: string, stepDescription: string, icon: string): Promise<{ type: 'image' | 'svg'; content: string }> {
+  const res = await fetch('/api/illustration', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stepTitle, stepDescription, icon }),
+  });
+  if (!res.ok) throw new Error('Illustration failed');
+  const data = await res.json();
+  if (data.type === 'image') return { type: 'image', content: data.image };
+  return { type: 'svg', content: data.svg };
+}
+
 export async function findContractors(lat: number, lng: number, category?: string): Promise<Contractor[]> {
   const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
   if (category) params.set('category', category);

@@ -2,6 +2,7 @@ import type { RepairAnalysis } from '../../types/analysis';
 import Card from '../ui/Card';
 import DifficultyBadge from './DifficultyBadge';
 import Badge from '../ui/Badge';
+import StepIllustration from './StepIllustration';
 import { STEP_ICONS } from '../../lib/constants';
 
 export default function RepairInfographic({ analysis }: { analysis: RepairAnalysis }) {
@@ -57,6 +58,14 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
                   <span className="text-lg">{STEP_ICONS[step.icon] || '🔧'}</span>
                   <h4 className="font-semibold text-gray-900 text-sm">{step.title}</h4>
                 </div>
+
+                {/* AI-generated illustration */}
+                <StepIllustration
+                  stepTitle={step.title}
+                  stepDescription={step.description}
+                  icon={step.icon}
+                />
+
                 <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
                 {step.tip && (
                   <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700">
