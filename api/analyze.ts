@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import busboy from 'busboy';
+import { Readable } from 'stream';
 
 export const config = { api: { bodyParser: false } };
 
@@ -14,7 +15,11 @@ function parseMultipart(req: VercelRequest): Promise<{ files: ParsedFile[]; fiel
   return new Promise((resolve, reject) => {
     const files: ParsedFile[] = [];
     const fields: Record<string, string> = {};
-    const bb = busboy({ headers: req.headers as Record<string, string> });
+
+    const bb = busboy({
+      headers: req.headers as Record<string, string>,
+      limits: { fileSize: 25 * 1024 * 1024 },
+    });
 
     bb.on('file', (_name: string, stream: NodeJS.ReadableStream, info: { filename: string; mimeType: string }) => {
       const chunks: Buffer[] = [];
@@ -28,18 +33,30 @@ function parseMultipart(req: VercelRequest): Promise<{ files: ParsedFile[]; fiel
     bb.on('finish', () => resolve({ files, fields }));
     bb.on('error', reject);
 
-    req.pipe(bb);
+    if (req.body && Buffer.isBuffer(req.body)) {
+      const readable = new Readable();
+      readable.push(req.body);
+      readable.push(null);
+      readable.pipe(bb);
+    } else if (req.body && typeof req.body === 'string') {
+      const readable = new Readable();
+      readable.push(Buffer.from(req.body, 'binary'));
+      readable.push(null);
+      readable.pipe(bb);
+    } else {
+      req.pipe(bb);
+    }
   });
 }
 
-const SYSTEM_PROMPT = `You are an expert home repair contractor and inspector with 30+ years of experience. A user has sent you a photo or video frame of a home problem. Analyze the issue and provide a complete repair guide.
+const SYSTEM_PROMPT = `You are an expert home repair contractor and inspector with 30+ years of experience. A user has sent you a photo of a home problem. Analyze the issue and provide a complete repair guide.
 
-You MUST respond with valid JSON matching this exact structure:
+You MUST respond with ONLY valid JSON (no markdown, no code fences) matching this exact structure:
 {
   "problemDescription": "Clear description of the identified problem",
   "problemTitle": "Short title (3-6 words)",
   "category": "plumbing|electrical|hvac|roofing|flooring|painting|general|exterior",
-  "difficulty": 1-5 (1=easy DIY, 2=moderate DIY, 3=intermediate, 4=advanced, 5=professional required),
+  "difficulty": 1-5,
   "estimatedTime": "e.g. 1-2 hours",
   "estimatedCost": "e.g. $50-$150",
   "safetyWarnings": ["array of safety warnings if any"],
@@ -55,7 +72,7 @@ You MUST respond with valid JSON matching this exact structure:
   "tools": [
     {
       "name": "Tool name",
-      "required": true/false,
+      "required": true,
       "searchQuery": "search term for buying this tool"
     }
   ],
@@ -72,11 +89,13 @@ You MUST respond with valid JSON matching this exact structure:
   "videoSearchQuery": "YouTube search query for this repair"
 }
 
-If the image is unclear or you need more information, set "needsMoreInfo": true and provide a specific "followUpQuestion". Still provide your best analysis with whatever you can determine.
-
-Be thorough, practical, and safety-conscious. Always mention when a repair should be done by a licensed professional (especially electrical and gas work).`;
+If the image is unclear, set "needsMoreInfo": true and provide a "followUpQuestion". Be thorough, practical, and safety-conscious. Mention when a licensed professional is needed.`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
@@ -84,37 +103,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (files.length === 0) return res.status(400).json({ error: 'No media files uploaded' });
 
-    const imageContent: any[] = [];
-    for (const file of files) {
-      if (file.mimetype.startsWith('image/')) {
-        imageContent.push({
-          type: 'image',
-          source: { type: 'base64', media_type: file.mimetype, data: file.buffer.toString('base64') },
-        });
-      }
-    }
-
-    if (imageContent.length === 0) {
+    const imageFiles = files.filter(f => f.mimetype.startsWith('image/'));
+    if (imageFiles.length === 0) {
       return res.status(400).json({ error: 'Please upload at least one image.' });
     }
 
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+    const imageParts = imageFiles.map(f => ({
+      inlineData: { data: f.buffer.toString('base64'), mimeType: f.mimetype },
+    }));
+
     const additionalContext = fields.context || '';
-    imageContent.push({
-      type: 'text',
-      text: additionalContext
-        ? `User's additional context: ${additionalContext}\n\nAnalyze this home repair issue and respond with JSON.`
-        : 'Analyze this home repair issue and respond with JSON.',
-    });
+    const promptText = additionalContext
+      ? `${SYSTEM_PROMPT}\n\nUser's additional context: ${additionalContext}\n\nAnalyze this home repair issue and respond with JSON only.`
+      : `${SYSTEM_PROMPT}\n\nAnalyze this home repair issue and respond with JSON only.`;
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: imageContent }],
-    });
+    const result = await model.generateContent([promptText, ...imageParts]);
+    const text = result.response.text();
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    // Extract JSON from response
     let jsonStr = text;
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) jsonStr = jsonMatch[1].trim();
@@ -122,7 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const analysis = JSON.parse(jsonStr);
     res.json(analysis);
   } catch (err: any) {
-    console.error('Analysis error:', err);
-    res.status(500).json({ error: 'Failed to analyze image. Please try again.' });
+    console.error('Analysis error:', err?.message);
+    res.status(500).json({
+      error: 'Failed to analyze image. Please try again.',
+      detail: err?.message || String(err),
+    });
   }
 }

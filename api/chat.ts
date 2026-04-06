@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import busboy from 'busboy';
+import { Readable } from 'stream';
 
 export const config = { api: { bodyParser: false } };
 
@@ -13,7 +14,11 @@ function parseMultipart(req: VercelRequest): Promise<{ files: ParsedFile[]; fiel
   return new Promise((resolve, reject) => {
     const files: ParsedFile[] = [];
     const fields: Record<string, string> = {};
-    const bb = busboy({ headers: req.headers as Record<string, string> });
+
+    const bb = busboy({
+      headers: req.headers as Record<string, string>,
+      limits: { fileSize: 25 * 1024 * 1024 },
+    });
 
     bb.on('file', (_name: string, stream: NodeJS.ReadableStream, info: { mimeType: string }) => {
       const chunks: Buffer[] = [];
@@ -27,7 +32,19 @@ function parseMultipart(req: VercelRequest): Promise<{ files: ParsedFile[]; fiel
     bb.on('finish', () => resolve({ files, fields }));
     bb.on('error', reject);
 
-    req.pipe(bb);
+    if (req.body && Buffer.isBuffer(req.body)) {
+      const readable = new Readable();
+      readable.push(req.body);
+      readable.push(null);
+      readable.pipe(bb);
+    } else if (req.body && typeof req.body === 'string') {
+      const readable = new Readable();
+      readable.push(Buffer.from(req.body, 'binary'));
+      readable.push(null);
+      readable.pipe(bb);
+    } else {
+      req.pipe(bb);
+    }
   });
 }
 
@@ -43,48 +60,53 @@ When the user asks follow-up questions or provides additional photos:
 Keep responses conversational but informative. Use numbered steps when giving instructions.`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { files, fields } = await parseMultipart(req);
     const messages = fields.messages ? JSON.parse(fields.messages) : [];
 
-    const userContent: any[] = [];
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+    // Build conversation history for Gemini
+    const history = messages.slice(0, -1).map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const chat = model.startChat({
+      history,
+      systemInstruction: SYSTEM_PROMPT,
+    });
+
+    // Build the last user message with any images
+    const parts: any[] = [];
     for (const file of files) {
       if (file.mimetype.startsWith('image/')) {
-        userContent.push({
-          type: 'image',
-          source: { type: 'base64', media_type: file.mimetype, data: file.buffer.toString('base64') },
-        });
+        parts.push({ inlineData: { data: file.buffer.toString('base64'), mimeType: file.mimetype } });
       }
     }
 
     const lastUserMsg = messages[messages.length - 1];
     if (lastUserMsg && lastUserMsg.role === 'user') {
-      userContent.push({ type: 'text', text: lastUserMsg.content });
+      parts.push({ text: lastUserMsg.content });
     }
 
-    const claudeMessages = messages.slice(0, -1).map((m: any) => ({
-      role: m.role,
-      content: m.content,
-    }));
-    claudeMessages.push({
-      role: 'user',
-      content: userContent.length > 0 ? userContent : lastUserMsg?.content || 'Hello',
-    });
+    if (parts.length === 0) {
+      parts.push({ text: 'Hello' });
+    }
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: claudeMessages,
-    });
+    const result = await chat.sendMessage(parts);
+    const text = result.response.text();
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
     res.json({ role: 'assistant', content: text });
   } catch (err: any) {
-    console.error('Chat error:', err);
-    res.status(500).json({ error: 'Failed to get response. Please try again.' });
+    console.error('Chat error:', err?.message);
+    res.status(500).json({ error: 'Failed to get response. Please try again.', detail: err?.message });
   }
 }
