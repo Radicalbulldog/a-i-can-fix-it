@@ -6,24 +6,27 @@ export const config = {
   maxDuration: 30,
 };
 
-const PROMPT = `You are a technical illustrator for a professional home repair manual. Create a DETAILED SVG illustration that shows a person performing a specific repair step. This must look like a reference diagram from a Haynes repair manual or IKEA assembly guide — NOT like an emoji or simple icon.
+const PROMPT = `You are a professional infographic illustrator creating step-by-step home repair guides. Create a clean, polished SVG illustration in the style of a modern home improvement manual or professional infographic.
+
+STYLE REFERENCE: Think clean vector infographic — like a professional DIY guide, Bosch tool manual, or home improvement website illustration. Clean shapes, clear visual hierarchy, professional but approachable.
 
 CRITICAL REQUIREMENTS:
 - viewBox="0 0 400 300"
-- Draw REALISTIC human hands (with fingers, knuckles, proper proportions) gripping and using the correct tool
-- Show the ACTUAL surface being worked on (wood grain for wood, brick texture for brick, pipe shapes for plumbing, etc.)
-- Include environmental context: show part of a wall, floor, pipe, or fixture so the viewer knows WHERE this is happening
-- Use perspective and depth — items closer should be larger
-- Draw the specific tool accurately (a pry bar looks different from a screwdriver, which looks different from a wrench)
-- Show motion with directional arrows where the tool/hand is moving
-- Use shading with different opacity levels to create depth
-- Color palette: #1f2937 (outlines), #f97316 (accent/highlights), #6b7280 (metal/tools), #d4a574 (skin), #a3a3a3 (surfaces), #3b82f6 (arrows/motion), #fbbf24 (warning/attention areas)
-- Stroke widths: 1.5 for details, 2.5 for outlines, 1 for fine detail
-- Minimum 30 path/shape elements — this should be DETAILED, not minimal
-- NO text, NO labels, NO annotations
+- Use a CLEAN, PROFESSIONAL vector illustration style — NOT photorealistic, NOT emoji-like
+- Draw recognizable tools, materials, and surfaces with clean geometric shapes and smooth curves
+- Show a person or hands performing the action when relevant — use simple but clear human figures (not stick figures, but stylized like infographic people)
+- Include environmental context: walls, floors, pipes, fixtures drawn with clean lines
+- Use a light background (#f0f4f8 or #e8edf2) with a subtle rounded rectangle frame
+- Color palette: #2563eb (primary blue), #3b82f6 (light blue), #1e3a5f (dark blue/outlines), #ffffff (white/highlights), #e2e8f0 (light gray surfaces), #94a3b8 (medium gray), #f97316 (orange accent for action areas), #60a5fa (arrows/motion indicators)
+- Stroke widths: 1.5 for details, 2 for main outlines, 0.75 for fine detail
+- Use filled shapes with clean outlines — NOT wireframe/line-art only
+- Show the KEY action clearly: what tool is being used, what surface is being worked on, what motion is happening
+- Include subtle directional arrows (#3b82f6) to show movement or application direction
+- Minimum 25 shape elements for sufficient detail
+- NO text, NO labels, NO annotations — the illustration must be self-explanatory
 - Output ONLY the SVG code, no markdown fences, no explanation
 
-The illustration should answer: "What exactly does this look like when someone is doing it?"`;
+The illustration should clearly communicate the repair action at a glance, like a panel in a professional step-by-step infographic.`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
