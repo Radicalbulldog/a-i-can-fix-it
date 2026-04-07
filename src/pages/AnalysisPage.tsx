@@ -11,6 +11,7 @@ import ProjectCart from '../components/analysis/ProjectCart';
 import ContractorPreview from '../components/contractors/ContractorPreview';
 import ChatWindow from '../components/chat/ChatWindow';
 import Card from '../components/ui/Card';
+import StepVerifier from '../components/analysis/StepVerifier';
 import { STEP_ICONS } from '../lib/constants';
 
 type Tab = 'guide' | 'cart' | 'pros' | 'chat';
@@ -185,10 +186,19 @@ export default function AnalysisPage() {
                 </div>
               )}
 
+              {/* Double-check my work */}
+              <StepVerifier
+                stepTitle={step.title}
+                stepDescription={step.description}
+                stepNumber={step.number}
+                totalSteps={analysisResult.steps.length}
+                projectTitle={analysisResult.problemTitle}
+              />
+
               {/* Complete step button */}
               <button
                 onClick={() => toggleStep(step.number)}
-                className={`w-full py-4 rounded-2xl font-semibold text-base transition-all active:scale-[0.97] ${
+                className={`w-full py-4 rounded-2xl font-semibold text-base transition-all active:scale-[0.97] mt-4 ${
                   isComplete
                     ? 'bg-brand-50 text-brand-700 border-2 border-brand-200'
                     : 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
