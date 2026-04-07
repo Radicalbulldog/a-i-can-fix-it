@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { sendChatMessage } from '../lib/api';
+import { sendChatMessage, searchVideos } from '../lib/api';
 import type { ChatMessage } from '../types/chat';
 import type { RepairStep } from '../types/analysis';
+import type { VideoResult } from '../types/video';
 import DifficultyBadge from '../components/analysis/DifficultyBadge';
 import Badge from '../components/ui/Badge';
 import StepIllustration from '../components/analysis/StepIllustration';
@@ -51,6 +52,7 @@ export default function AnalysisPage() {
   const [focusStep, setFocusStep] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [topVideo, setTopVideo] = useState<VideoResult | null>(null);
   const focusRef = useRef<HTMLDivElement>(null);
 
   // Keep screen awake in focus mode
@@ -60,6 +62,14 @@ export default function AnalysisPage() {
     (navigator as any).wakeLock?.request?.('screen').then((wl: any) => { wakeLock = wl; }).catch(() => {});
     return () => { wakeLock?.release?.(); };
   }, [focusMode]);
+
+  // Fetch top video on mount
+  useEffect(() => {
+    if (!analysisResult?.videoSearchQuery) return;
+    searchVideos(analysisResult.videoSearchQuery)
+      .then(videos => { if (videos.length > 0) setTopVideo(videos[0]); })
+      .catch(() => {});
+  }, [analysisResult?.videoSearchQuery]);
 
   const handleSendMessage = useCallback(async (text: string, images?: File[]) => {
     const userMsg: ChatMessage = { id: `user_${Date.now()}`, role: 'user', content: text, timestamp: Date.now() };
@@ -251,6 +261,32 @@ export default function AnalysisPage() {
             <Badge color="text-slate-600" bg="bg-slate-100">{analysisResult.estimatedTime}</Badge>
             <Badge color="text-emerald-700" bg="bg-emerald-50">{analysisResult.estimatedCost}</Badge>
           </div>
+
+          {/* Video recommendation */}
+          {topVideo && (
+            <a
+              href={`https://www.youtube.com/watch?v=${topVideo.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl mb-4 transition-all active:scale-[0.98] hover:bg-slate-100"
+            >
+              <div className="relative w-28 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">
+                <img src={topVideo.thumbnail} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-md">
+                    <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">{topVideo.title}</p>
+                <p className="text-xs text-slate-400 mt-1">{topVideo.channelTitle}</p>
+                <p className="text-xs text-red-600 font-medium mt-1">Watch on YouTube</p>
+              </div>
+            </a>
+          )}
 
           {analysisResult.safetyWarnings.length > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl mb-4">
