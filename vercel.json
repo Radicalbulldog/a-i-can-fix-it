@@ -8,6 +8,7 @@
     { "source": "/api/videos", "destination": "/api/videos" },
     { "source": "/api/contractors", "destination": "/api/contractors" },
     { "source": "/api/illustration", "destination": "/api/illustration" },
+    { "source": "/api/prices", "destination": "/api/prices" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
