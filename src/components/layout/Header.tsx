@@ -7,11 +7,16 @@ const navLinks = [
   { to: '/contractors', label: 'Contractors' },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  dark: boolean;
+  onToggleDark: () => void;
+}
+
+export default function Header({ dark, onToggleDark }: HeaderProps) {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-slate-200/60">
+    <header className="sticky top-0 z-50 glass dark:glass-dark border-b border-slate-200/60 dark:border-slate-700/60">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center shadow-sm">
@@ -20,26 +25,45 @@ export default function Header() {
             </svg>
           </div>
           <span className="font-bold text-lg tracking-tight">
-            <span className="text-brand-600">a.</span>{' '}
-            <span className="text-slate-800">I can fix it</span>
+            <span className="text-brand-600 dark:text-brand-400">a.</span>{' '}
+            <span className="text-slate-800 dark:text-slate-100">I can fix it</span>
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map(link => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname === link.to
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex items-center gap-2">
+          <nav className="hidden md:flex items-center gap-1 mr-2">
+            {navLinks.map(link => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname === link.to
+                    ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Dark mode toggle */}
+          <button
+            onClick={onToggleDark}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -134,12 +134,12 @@ export default function AnalysisPage() {
     const isFirst = focusStep === 0;
 
     return (
-      <div ref={focusRef} className="fixed inset-0 z-[60] bg-white flex flex-col">
+      <div ref={focusRef} className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
         {showConfetti && <Confetti />}
 
         {/* Focus header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <button onClick={() => setFocusMode(false)} className="text-slate-500 font-medium text-sm flex items-center gap-1">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <button onClick={() => setFocusMode(false)} className="text-slate-500 dark:text-slate-400 font-medium text-sm flex items-center gap-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" d="M15 19l-7-7 7-7" />
             </svg>
@@ -181,14 +181,14 @@ export default function AnalysisPage() {
                   {isComplete ? '✓' : step.number}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800">{step.title}</h3>
-                  <span className="text-sm text-slate-400">{STEP_ICONS[step.icon] || '🔧'} {step.icon}</span>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{step.title}</h3>
+                  <span className="text-sm text-slate-400 dark:text-slate-500">{STEP_ICONS[step.icon] || '🔧'} {step.icon}</span>
                 </div>
               </div>
 
               <StepIllustration stepTitle={step.title} stepDescription={step.description} icon={step.icon} />
 
-              <p className="text-base text-slate-600 leading-relaxed mt-4 mb-4">{step.description}</p>
+              <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed mt-4 mb-4">{step.description}</p>
 
               {step.tip && (
                 <div className="p-4 bg-brand-50 border border-brand-200 rounded-2xl text-sm text-brand-800 mb-6">
@@ -222,11 +222,11 @@ export default function AnalysisPage() {
 
         {/* Navigation */}
         {!allComplete && (
-          <div className="flex gap-3 px-5 py-4 border-t border-slate-100 pb-safe">
+          <div className="flex gap-3 px-5 py-4 border-t border-slate-100 dark:border-slate-800 pb-safe">
             <button
               onClick={() => setFocusStep(Math.max(0, focusStep - 1))}
               disabled={isFirst}
-              className="flex-1 py-3.5 bg-slate-100 text-slate-700 font-semibold rounded-2xl disabled:opacity-30 transition-all active:scale-[0.97]"
+              className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl disabled:opacity-30 transition-all active:scale-[0.97]"
             >
               Previous
             </button>
@@ -252,9 +252,9 @@ export default function AnalysisPage() {
 
       {/* Summary header */}
       <div className="px-4 pt-4 pb-2 animate-fade-in">
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">{analysisResult.problemTitle}</h2>
-          <p className="text-sm text-slate-500 mb-3 leading-relaxed">{analysisResult.problemDescription}</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm p-5">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">{analysisResult.problemTitle}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">{analysisResult.problemDescription}</p>
 
           <div className="flex flex-wrap gap-2 mb-4">
             <DifficultyBadge level={analysisResult.difficulty} />
@@ -268,7 +268,7 @@ export default function AnalysisPage() {
               href={`https://www.youtube.com/watch?v=${topVideo.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl mb-4 transition-all active:scale-[0.98] hover:bg-slate-100"
+              className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl mb-4 transition-all active:scale-[0.98] hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <div className="relative w-28 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">
                 <img src={topVideo.thumbnail} alt="" className="w-full h-full object-cover" />
@@ -281,7 +281,7 @@ export default function AnalysisPage() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">{topVideo.title}</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">{topVideo.title}</p>
                 <p className="text-xs text-slate-400 mt-1">{topVideo.channelTitle}</p>
                 <p className="text-xs text-red-600 font-medium mt-1">Watch on YouTube</p>
               </div>
@@ -304,7 +304,7 @@ export default function AnalysisPage() {
                 <span>{completedSteps.size} of {analysisResult.steps.length} steps</span>
                 <span>{Math.round((completedSteps.size / analysisResult.steps.length) * 100)}%</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-brand-500 rounded-full transition-all duration-500"
                   style={{ width: `${(completedSteps.size / analysisResult.steps.length) * 100}%` }}
@@ -322,8 +322,8 @@ export default function AnalysisPage() {
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-14 z-40 bg-slate-50 px-4 pt-2 pb-0">
-        <div className="flex bg-white rounded-xl border border-slate-200/80 p-1 shadow-sm">
+      <div className="sticky top-14 z-40 bg-slate-50 dark:bg-slate-900 px-4 pt-2 pb-0">
+        <div className="flex bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-1 shadow-sm">
           {tabs.map(tab => (
             <button
               key={tab.key}
@@ -331,7 +331,7 @@ export default function AnalysisPage() {
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === tab.key
                   ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               {tab.label}
@@ -404,8 +404,8 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
         return (
           <div
             key={step.number}
-            className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
-              isComplete ? 'border-brand-200 bg-brand-50/30' : 'border-slate-200/80'
+            className={`bg-white dark:bg-slate-800 rounded-2xl border shadow-sm overflow-hidden transition-all ${
+              isComplete ? 'border-brand-200 dark:border-brand-800 bg-brand-50/30 dark:bg-brand-900/20' : 'border-slate-200/80 dark:border-slate-700/80'
             }`}
           >
             <div className="flex items-center gap-3 p-4">
@@ -415,7 +415,7 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                   isComplete
                     ? 'bg-brand-500 text-white scale-100'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
                 {isComplete ? (
@@ -434,11 +434,11 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">{STEP_ICONS[step.icon] || '🔧'}</span>
-                  <h4 className={`font-semibold text-sm ${isComplete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                  <h4 className={`font-semibold text-sm ${isComplete ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
                     {step.title}
                   </h4>
                 </div>
-                <p className={`text-xs mt-0.5 line-clamp-1 ${isComplete ? 'text-slate-300' : 'text-slate-500'}`}>
+                <p className={`text-xs mt-0.5 line-clamp-1 ${isComplete ? 'text-slate-300 dark:text-slate-600' : 'text-slate-500 dark:text-slate-400'}`}>
                   {step.description}
                 </p>
               </button>
@@ -461,7 +461,7 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
             </svg>
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-sm text-slate-800">Watch Repair Videos</h4>
+            <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100">Watch Repair Videos</h4>
             <p className="text-xs text-slate-400">See how others fixed this</p>
           </div>
           <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

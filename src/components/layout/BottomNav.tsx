@@ -26,7 +26,7 @@ const tabs = [
 
 export default function BottomNav() {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-slate-200/60 pb-safe">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass dark:glass-dark border-t border-slate-200/60 dark:border-slate-700/60 pb-safe">
       <div className="flex justify-around items-center h-16">
         {tabs.map(tab => (
           <NavLink
@@ -36,8 +36,8 @@ export default function BottomNav() {
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? 'text-brand-600 scale-105'
-                  : 'text-slate-400 active:scale-95'
+                  ? 'text-brand-600 dark:text-brand-400 scale-105'
+                  : 'text-slate-400 dark:text-slate-500 active:scale-95'
               }`
             }
           >
