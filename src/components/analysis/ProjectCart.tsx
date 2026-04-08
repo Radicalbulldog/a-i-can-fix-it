@@ -298,32 +298,32 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
   };
 
   const renderItem = (item: CartItem, index: number) => (
-    <div key={index} className="border border-gray-100 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 py-2.5 px-3 hover:bg-gray-50 transition-colors">
+    <div key={index} className="border border-gray-100 dark:border-slate-700 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 py-2.5 px-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
         <input
           type="checkbox"
           checked={item.checked}
           onChange={() => toggleItem(index)}
-          className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 flex-shrink-0"
+          className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-brand-500 focus:ring-brand-500 flex-shrink-0"
         />
         <button
           onClick={() => item.checked && toggleExpand(index)}
-          className={`flex-1 text-left text-sm ${item.checked ? 'text-gray-900 cursor-pointer' : 'text-gray-400 line-through cursor-default'}`}
+          className={`flex-1 text-left text-sm ${item.checked ? 'text-gray-900 dark:text-slate-100 cursor-pointer' : 'text-gray-400 dark:text-slate-500 line-through cursor-default'}`}
         >
           {item.name}
         </button>
         <div className="flex items-center gap-2 flex-shrink-0">
           {item.type === 'material' && item.checked && (
             <div className="text-right">
-              <div className="text-[10px] text-gray-400">{item.quantity}</div>
-              <div className="text-xs font-medium text-green-600">{item.estimatedCost}</div>
+              <div className="text-[10px] text-gray-400 dark:text-slate-500">{item.quantity}</div>
+              <div className="text-xs font-medium text-green-600 dark:text-green-400">{item.estimatedCost}</div>
             </div>
           )}
-          {item.required && <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded font-medium">Required</span>}
+          {item.required && <span className="text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded font-medium">Required</span>}
           {item.checked && (
             <span
               onClick={() => toggleExpand(index)}
-              className="text-gray-400 cursor-pointer text-xs select-none"
+              className="text-gray-400 dark:text-slate-500 cursor-pointer text-xs select-none"
             >
               {item.expanded ? '▲' : '▼'}
             </span>
@@ -333,8 +333,8 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
 
       {/* Expanded store links */}
       {item.checked && item.expanded && (
-        <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 space-y-1.5">
-          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Shop this item:</p>
+        <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 px-3 py-2 space-y-1.5">
+          <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium uppercase tracking-wide">Shop this item:</p>
           {STORES.map(store => (
             <a
               key={store.name}
@@ -356,16 +356,16 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
     <Card>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
             <span>🛒</span> Project Cart
           </h3>
-          <span className="text-xs text-gray-500">{checkedItems.length} of {items.length} items</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400">{checkedItems.length} of {items.length} items</span>
         </div>
 
         {/* Tools */}
         {items.some(i => i.type === 'tool') && (
           <div>
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tools</h4>
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tools</h4>
             <div className="space-y-1.5">
               {items.map((item, i) => item.type === 'tool' ? renderItem(item, i) : null)}
             </div>
@@ -375,7 +375,7 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
         {/* Materials */}
         {items.some(i => i.type === 'material') && (
           <div>
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Materials</h4>
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Materials</h4>
             <div className="space-y-1.5">
               {items.map((item, i) => item.type === 'material' ? renderItem(item, i) : null)}
             </div>
@@ -383,7 +383,7 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
         )}
 
         {/* Export buttons */}
-        <div className="border-t border-gray-100 pt-4 space-y-2">
+        <div className="border-t border-gray-100 dark:border-slate-700 pt-4 space-y-2">
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" className="flex-1" onClick={handleCopy}>
               {copied ? '✓ Copied!' : '📋 Copy List'}
@@ -406,7 +406,7 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
               '💰 Download Price Match List (PDF)'
             )}
           </button>
-          <p className="text-[10px] text-gray-400 text-center">
+          <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center">
             AI-estimated best prices across Home Depot, Lowe's &amp; Ace Hardware
           </p>
         </div>

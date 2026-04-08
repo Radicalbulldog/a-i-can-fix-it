@@ -11,8 +11,8 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
       {/* Header */}
       <Card>
         <div className="space-y-3">
-          <h2 className="text-xl font-bold text-gray-900">{analysis.problemTitle}</h2>
-          <p className="text-sm text-gray-600">{analysis.problemDescription}</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{analysis.problemTitle}</h2>
+          <p className="text-sm text-gray-600 dark:text-slate-300">{analysis.problemDescription}</p>
 
           <div className="flex flex-wrap gap-2">
             <DifficultyBadge level={analysis.difficulty} />
@@ -22,9 +22,9 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
           </div>
 
           {analysis.safetyWarnings.length > 0 && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <div className="text-sm font-semibold text-red-800 mb-1">⚠️ Safety Warnings</div>
-              <ul className="text-xs text-red-700 space-y-1">
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <div className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">⚠️ Safety Warnings</div>
+              <ul className="text-xs text-red-700 dark:text-red-400 space-y-1">
                 {analysis.safetyWarnings.map((w, i) => (
                   <li key={i}>• {w}</li>
                 ))}
@@ -36,7 +36,7 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
 
       {/* Steps */}
       <Card>
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
           <span>📝</span> Step-by-Step Guide
         </h3>
         <div className="space-y-1">
@@ -56,7 +56,7 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg">{STEP_ICONS[step.icon] || '🔧'}</span>
-                  <h4 className="font-semibold text-gray-900 text-sm">{step.title}</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{step.title}</h4>
                 </div>
 
                 {/* AI-generated illustration */}
@@ -66,9 +66,9 @@ export default function RepairInfographic({ analysis }: { analysis: RepairAnalys
                   icon={step.icon}
                 />
 
-                <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
+                <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">{step.description}</p>
                 {step.tip && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700">
+                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-700 dark:text-blue-300">
                     💡 <strong>Pro tip:</strong> {step.tip}
                   </div>
                 )}

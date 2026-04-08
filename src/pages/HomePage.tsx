@@ -1,20 +1,74 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Camera, Image as ImageIcon, Video, Mic, MicOff, X, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
 import { useCamera } from '../hooks/useCamera';
 import { useAppContext } from '../context/AppContext';
 import { analyzeMedia } from '../lib/api';
 import AnalysisLoader from '../components/ui/AnalysisLoader';
 
 export default function HomePage() {
-  const { files, previews, addFiles, removeFile, clearFiles } = useCamera();
+  const { files, previews, addFiles, removeFile } = useCamera();
   const { setAnalysis, setIsAnalyzing, isAnalyzing, setMedia } = useAppContext();
   const [context, setContext] = useState('');
   const [error, setError] = useState<string | null>(null);
+  
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+
+  // Accordion state
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
   const navigate = useNavigate();
 
   const photoRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Initialize Speech Recognition if supported
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setContext((prev) => (prev ? prev + ' ' + finalTranscript : finalTranscript));
+        }
+      };
+      rec.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsRecording(false);
+      };
+      rec.onend = () => {
+        setIsRecording(false);
+      };
+      setRecognition(rec);
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognition) {
+       alert("Speech recognition is not supported in this browser.");
+       return;
+    }
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+    } else {
+      recognition.start();
+      setIsRecording(true);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
@@ -39,153 +93,157 @@ export default function HomePage() {
     }
   };
 
-  // Full-screen loading overlay
-  if (isAnalyzing) {
-    return <AnalysisLoader />;
-  }
+  if (isAnalyzing) return <AnalysisLoader />;
 
-  // Camera-first: no photos yet
-  if (previews.length === 0) {
-    return (
-      <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
-        {/* Hidden inputs */}
-        <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
-        <input ref={videoRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleFileChange} />
-        <input ref={uploadRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileChange} />
-
-        {/* Viewfinder area */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24">
-          {/* Viewfinder frame */}
-          <div className="relative w-full max-w-sm aspect-[3/4] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-b from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-850 flex flex-col items-center justify-center mb-8 overflow-hidden">
-            {/* Corner brackets */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-t-3 border-l-3 border-brand-500 rounded-tl-lg" style={{borderWidth: '3px 0 0 3px'}} />
-            <div className="absolute top-4 right-4 w-8 h-8 border-t-3 border-r-3 border-brand-500 rounded-tr-lg" style={{borderWidth: '3px 3px 0 0'}} />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-b-3 border-l-3 border-brand-500 rounded-bl-lg" style={{borderWidth: '0 0 3px 3px'}} />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-b-3 border-r-3 border-brand-500 rounded-br-lg" style={{borderWidth: '0 3px 3px 0'}} />
-
-            {/* Crosshair center */}
-            <div className="w-12 h-12 mb-4 opacity-20">
-              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-400">
-                <circle cx="24" cy="24" r="10" />
-                <line x1="24" y1="8" x2="24" y2="16" />
-                <line x1="24" y1="32" x2="24" y2="40" />
-                <line x1="8" y1="24" x2="16" y2="24" />
-                <line x1="32" y1="24" x2="40" y2="24" />
-              </svg>
-            </div>
-
-            <p className="text-slate-500 dark:text-slate-300 font-semibold text-lg mb-1">Point at what's broken</p>
-            <p className="text-slate-400 dark:text-slate-500 text-sm">Take a photo to get started</p>
-          </div>
-
-          {/* Shutter button */}
-          <button
-            onClick={() => photoRef.current?.click()}
-            className="w-20 h-20 rounded-full bg-white dark:bg-slate-800 border-4 border-brand-500 flex items-center justify-center shadow-lg shutter-ring active:scale-90 transition-transform mb-6"
-            aria-label="Take photo"
-          >
-            <div className="w-14 h-14 rounded-full bg-brand-500" />
-          </button>
-
-          {/* Secondary actions */}
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => videoRef.current?.click()}
-              className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-              </div>
-              <span className="text-xs font-medium">Video</span>
-            </button>
-
-            <button
-              onClick={() => uploadRef.current?.click()}
-              className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                </svg>
-              </div>
-              <span className="text-xs font-medium">Gallery</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Photos selected: show preview + analyze
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col px-4 pt-4 pb-24">
-      {/* Hidden inputs */}
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col px-4 pt-4 pb-24 overflow-x-hidden">
       <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <input ref={videoRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleFileChange} />
       <input ref={uploadRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileChange} />
 
-      {/* Preview grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4 animate-fade-in">
-        {previews.map((url, i) => (
-          <div key={i} className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 aspect-square shadow-sm">
-            <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-            <button
-              onClick={() => removeFile(i)}
-              className="absolute top-2 right-2 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-sm transition-colors backdrop-blur-sm"
-              aria-label="Remove"
+      <AnimatePresence mode="wait">
+        {previews.length === 0 ? (
+          <motion.div 
+            key="zero-state"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+            className="flex-1 flex flex-col items-center justify-center -mt-8"
+          >
+            <div className="relative w-full max-w-sm aspect-[3/4] rounded-3xl border border-slate-300 dark:border-slate-700 bg-gradient-to-b from-slate-100/50 to-slate-50/50 dark:from-slate-800/50 dark:to-slate-850/50 shadow-glass dark:shadow-glass-dark flex flex-col items-center justify-center mb-10 overflow-hidden">
+              
+              <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }} className="absolute inset-4">
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-brand-500 rounded-tl-xl opacity-80" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-brand-500 rounded-tr-xl opacity-80" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-brand-500 rounded-bl-xl opacity-80" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-brand-500 rounded-br-xl opacity-80" />
+              </motion.div>
+
+              <Camera className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+              <p className="text-slate-900 dark:text-white font-bold text-xl mb-2">Capture the issue</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium text-center px-8">Center the exact spot that needs fixing to get started.</p>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => photoRef.current?.click()}
+              className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-brand-500 flex items-center justify-center shadow-[0_0_40px_rgba(13,148,136,0.3)] shutter-ring mb-8 relative z-10"
+              aria-label="Take photo"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        ))}
+              <div className="w-16 h-16 rounded-full bg-brand-500 shadow-inner" />
+            </motion.button>
 
-        {/* Add more button */}
-        <button
-          onClick={() => uploadRef.current?.click()}
-          className="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 aspect-square flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-500 hover:border-slate-400 transition-colors"
-        >
-          <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span className="text-xs font-medium">Add more</span>
-        </button>
-      </div>
+            <div className="flex items-center gap-10">
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => uploadRef.current?.click()} className="flex flex-col items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-2xl glass dark:glass-dark flex items-center justify-center shadow-glass dark:shadow-glass-dark">
+                  <ImageIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                </div>
+                <span className="text-xs font-semibold">Gallery</span>
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => videoRef.current?.click()} className="flex flex-col items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-2xl glass dark:glass-dark flex items-center justify-center shadow-glass dark:shadow-glass-dark">
+                  <Video className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                </div>
+                <span className="text-xs font-semibold">Video</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="ready-state"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col w-full max-w-md mx-auto"
+          >
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <AnimatePresence>
+                {previews.map((url, i) => (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    key={url} 
+                    className="relative rounded-3xl overflow-hidden glass dark:glass-dark aspect-square shadow-glass dark:shadow-glass-dark group"
+                  >
+                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <button
+                      onClick={() => removeFile(i)}
+                      className="absolute top-3 right-3 w-8 h-8 glass dark:glass-dark hover:bg-black/80 text-slate-800 dark:text-white rounded-full flex items-center justify-center transition-colors !p-0 shadow-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
-      {/* Context input */}
-      <div className="mb-4 animate-slide-up">
-        <textarea
-          value={context}
-          onChange={e => setContext(e.target.value)}
-          placeholder="What's the problem? (optional)"
-          className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-200/50 outline-none resize-none shadow-sm"
-          rows={2}
-        />
-      </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => uploadRef.current?.click()}
+                className="rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 aspect-square flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all shadow-sm"
+              >
+                <Camera className="w-8 h-8 mb-2 opacity-80" />
+                <span className="text-sm font-bold">Add media</span>
+              </motion.button>
+            </div>
 
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 animate-fade-in">
-          {error}
-        </div>
-      )}
+            {error && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 p-4 rounded-2xl glass bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800/30 text-sm text-red-700 dark:text-red-400 font-medium">
+                {error}
+              </motion.div>
+            )}
 
-      {/* Action buttons */}
-      <div className="flex gap-3 animate-slide-up">
-        <button
-          onClick={() => { clearFiles(); setContext(''); setError(null); }}
-          className="flex-1 px-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded-2xl transition-all active:scale-[0.97] shadow-sm"
-        >
-          Clear
-        </button>
-        <button
-          onClick={handleAnalyze}
-          className="flex-[2] px-5 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-2xl transition-all active:scale-[0.97] shadow-md shadow-brand-600/20"
-        >
-          Analyze Problem
-        </button>
-      </div>
+            <div className="mb-6 bg-white dark:bg-slate-850 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all">
+              <button 
+                onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                className="w-full px-5 py-4 flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <span>Tell me any additional details...</span>
+                {isDetailsOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              </button>
+              
+              <AnimatePresence>
+                {isDetailsOpen && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }} 
+                    animate={{ height: 'auto', opacity: 1 }} 
+                    exit={{ height: 0, opacity: 0 }} 
+                    className="border-t border-slate-100 dark:border-slate-800"
+                  >
+                    <div className="p-4 relative">
+                      <textarea
+                        value={context}
+                        onChange={e => setContext(e.target.value)}
+                        placeholder="It leaks behind the wall when I turn on the hot water..."
+                        className="w-full px-4 py-3 pb-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 rounded-2xl text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none resize-none shadow-inset-soft dark:shadow-inset-dark"
+                        rows={3}
+                      />
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={toggleRecording}
+                        className={`absolute bottom-6 right-6 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}
+                        aria-label="Use Voice Dictation"
+                      >
+                        {isRecording ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleAnalyze}
+              className="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white font-bold text-lg rounded-2xl shadow-glass dark:shadow-glass-dark flex items-center justify-center gap-2 mb-4 transition-colors"
+            >
+              <Wrench className="w-5 h-5" />
+              Fix It
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

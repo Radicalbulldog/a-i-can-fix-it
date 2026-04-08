@@ -20,8 +20,8 @@ export default function ContractorList({ contractors, isLoading }: ContractorLis
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-3">👷</div>
-        <p className="text-gray-600 text-sm">No contractors found in your area</p>
-        <p className="text-gray-400 text-xs mt-1">Try expanding your search radius</p>
+        <p className="text-gray-600 dark:text-slate-300 text-sm">No contractors found in your area</p>
+        <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">Try expanding your search radius</p>
       </div>
     );
   }

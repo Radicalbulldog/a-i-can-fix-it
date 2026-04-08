@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import busboy from 'busboy';
 import { Readable } from 'stream';
 
@@ -70,43 +71,88 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { files, fields } = await parseMultipart(req);
     const messages = fields.messages ? JSON.parse(fields.messages) : [];
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    const provider = process.env.MODEL_PROVIDER === 'claude' ? 'claude' : 'gemini';
+    let outputText = '';
 
-    // Build conversation history for Gemini
-    const history = messages.slice(0, -1).map((m: any) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
+    if (provider === 'claude') {
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
-    const chat = model.startChat({
-      history,
-      systemInstruction: SYSTEM_PROMPT,
-    });
-
-    // Build the last user message with any images
-    const parts: any[] = [];
-    for (const file of files) {
-      if (file.mimetype.startsWith('image/')) {
-        parts.push({ inlineData: { data: file.buffer.toString('base64'), mimeType: file.mimetype } });
+      const userContent: any[] = [];
+      
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          userContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: file.mimetype as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+              data: file.buffer.toString('base64'),
+            },
+          });
+        }
       }
+
+      const lastUserMsg = messages[messages.length - 1];
+      if (lastUserMsg && lastUserMsg.role === 'user') {
+        userContent.push({ type: 'text', text: lastUserMsg.content });
+      }
+
+      const claudeMessages = messages.slice(0, -1).map((m: any) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+
+      claudeMessages.push({
+        role: 'user',
+        content: userContent.length > 0 ? userContent : (lastUserMsg?.content || 'Hello'),
+      });
+
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: claudeMessages,
+      });
+
+      outputText = response.content[0].type === 'text' ? response.content[0].text : '';
+    } else {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+      const history = messages.slice(0, -1).map((m: any) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
+
+      const chat = model.startChat({
+        history,
+        systemInstruction: SYSTEM_PROMPT,
+      });
+
+      const parts: any[] = [];
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          parts.push({ inlineData: { data: file.buffer.toString('base64'), mimeType: file.mimetype } });
+        }
+      }
+
+      const lastUserMsg = messages[messages.length - 1];
+      if (lastUserMsg && lastUserMsg.role === 'user') {
+        parts.push({ text: lastUserMsg.content });
+      }
+
+      if (parts.length === 0) {
+        parts.push({ text: 'Hello' });
+      }
+
+      const result = await chat.sendMessage(parts);
+      outputText = result.response.text();
     }
 
-    const lastUserMsg = messages[messages.length - 1];
-    if (lastUserMsg && lastUserMsg.role === 'user') {
-      parts.push({ text: lastUserMsg.content });
-    }
-
-    if (parts.length === 0) {
-      parts.push({ text: 'Hello' });
-    }
-
-    const result = await chat.sendMessage(parts);
-    const text = result.response.text();
-
-    res.json({ role: 'assistant', content: text });
-  } catch (err: any) {
-    console.error('Chat error:', err?.message);
-    res.status(500).json({ error: 'Failed to get response. Please try again.', detail: err?.message });
+    res.json({ role: 'assistant', content: outputText });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('Chat error:', errorMsg);
+    res.status(500).json({ error: 'Failed to get response. Please try again.', detail: errorMsg });
   }
 }

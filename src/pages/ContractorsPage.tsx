@@ -35,8 +35,8 @@ export default function ContractorsPage() {
       <PageShell>
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Find Local Contractors</h2>
-            <p className="text-sm text-gray-500">Licensed professionals in your area</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">Find Local Contractors</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Licensed professionals in your area</p>
           </div>
           <LocationPrompt
             onRequestLocation={requestLocation}
@@ -53,13 +53,13 @@ export default function ContractorsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Local Contractors</h2>
-            <p className="text-sm text-gray-500">Licensed & insured professionals near you</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">Local Contractors</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Licensed & insured professionals near you</p>
           </div>
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-gray-300 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none"
+            className="px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none"
           >
             {CATEGORIES.map(c => (
               <option key={c.value} value={c.value}>{c.label}</option>

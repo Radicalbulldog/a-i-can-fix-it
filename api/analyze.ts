@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import busboy from 'busboy';
 import { Readable } from 'stream';
 
@@ -108,33 +109,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Please upload at least one image.' });
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-
-    const imageParts = imageFiles.map(f => ({
-      inlineData: { data: f.buffer.toString('base64'), mimeType: f.mimetype },
-    }));
-
     const additionalContext = fields.context || '';
-    const promptText = additionalContext
-      ? `${SYSTEM_PROMPT}\n\nUser's additional context: ${additionalContext}\n\nAnalyze this home repair issue and respond with JSON only.`
-      : `${SYSTEM_PROMPT}\n\nAnalyze this home repair issue and respond with JSON only.`;
+    const provider = process.env.MODEL_PROVIDER === 'claude' ? 'claude' : 'gemini';
+    
+    let jsonStr = '';
 
-    const result = await model.generateContent([promptText, ...imageParts]);
-    const text = result.response.text();
+    if (provider === 'claude') {
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
+      
+      const imageContent: any[] = imageFiles.map(f => ({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: f.mimetype as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: f.buffer.toString('base64')
+        }
+      }));
+      
+      imageContent.push({
+        type: 'text',
+        text: additionalContext
+          ? \`User's additional context: \${additionalContext}\\n\\nAnalyze this home repair issue and respond with JSON only.\`
+          : 'Analyze this home repair issue and respond with JSON only.'
+      });
+
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: imageContent }],
+      });
+
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      jsonStr = text;
+    } else {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+      const imageParts = imageFiles.map(f => ({
+        inlineData: { data: f.buffer.toString('base64'), mimeType: f.mimetype },
+      }));
+
+      const promptText = additionalContext
+        ? \`\${SYSTEM_PROMPT}\\n\\nUser's additional context: \${additionalContext}\\n\\nAnalyze this home repair issue and respond with JSON only.\`
+        : \`\${SYSTEM_PROMPT}\\n\\nAnalyze this home repair issue and respond with JSON only.\`;
+
+      const result = await model.generateContent([promptText, ...imageParts]);
+      jsonStr = result.response.text();
+    }
 
     // Extract JSON from response
-    let jsonStr = text;
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const jsonMatch = jsonStr.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/);
     if (jsonMatch) jsonStr = jsonMatch[1].trim();
+
+    // Minor fix: if it starts with ``` it might miss regex if malformed, clean it a bit just in case.
+    if (jsonStr.startsWith('\`\`\`')) jsonStr = jsonStr.replace(/\`\`\`(?:json)?/g, '').replace(/\`\`\`/g, '');
 
     const analysis = JSON.parse(jsonStr);
     res.json(analysis);
-  } catch (err: any) {
-    console.error('Analysis error:', err?.message);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('Analysis error:', errorMsg);
     res.status(500).json({
       error: 'Failed to analyze image. Please try again.',
-      detail: err?.message || String(err),
+      detail: errorMsg,
     });
   }
 }

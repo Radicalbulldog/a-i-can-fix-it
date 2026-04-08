@@ -81,6 +81,12 @@ export default {
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
+      boxShadow: {
+        'glass': '0 4px 24px -4px rgba(0, 0, 0, 0.1), 0 0 1px 1px rgba(255, 255, 255, 0.2)',
+        'glass-dark': '0 8px 32px -8px rgba(0, 0, 0, 0.4), 0 0 1px 1px rgba(255, 255, 255, 0.05)',
+        'inset-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.04)',
+        'inset-dark': 'inset 0 2px 8px 0 rgba(0, 0, 0, 0.25)',
+      }
     },
   },
   plugins: [],

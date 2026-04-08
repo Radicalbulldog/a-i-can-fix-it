@@ -11,8 +11,8 @@ export default function LocationPrompt({ onRequestLocation, isLoading, error }: 
   return (
     <Card className="text-center max-w-md mx-auto">
       <div className="text-5xl mb-4">📍</div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">Find Contractors Near You</h3>
-      <p className="text-sm text-gray-600 mb-4">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Find Contractors Near You</h3>
+      <p className="text-sm text-gray-600 dark:text-slate-300 mb-4">
         Share your location to find licensed, insured contractors in your area who can handle your repair.
       </p>
       {error && (

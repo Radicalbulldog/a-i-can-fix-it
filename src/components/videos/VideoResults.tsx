@@ -21,8 +21,8 @@ export default function VideoResults({ videos, isLoading, query }: VideoResultsP
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-3">🎬</div>
-        <p className="text-gray-600 text-sm">No videos found for "{query}"</p>
-        <p className="text-gray-400 text-xs mt-1">AI video generation coming soon!</p>
+        <p className="text-gray-600 dark:text-slate-300 text-sm">No videos found for "{query}"</p>
+        <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">AI video generation coming soon!</p>
       </div>
     );
   }

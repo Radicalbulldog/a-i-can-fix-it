@@ -32,8 +32,8 @@ export default function VideosPage() {
     <PageShell>
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Repair Videos</h2>
-          <p className="text-sm text-gray-500">Find video tutorials for your repair</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">Repair Videos</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Find video tutorials for your repair</p>
         </div>
 
         <form onSubmit={e => { e.preventDefault(); doSearch(query); }} className="flex gap-2">
@@ -42,7 +42,7 @@ export default function VideosPage() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search for repair videos..."
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none text-sm"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none text-sm"
           />
           <button
             type="submit"

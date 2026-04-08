@@ -103,14 +103,14 @@ export default function AnalysisPage() {
   if (!analysisResult) {
     return (
       <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-6 pb-24">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
           <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-slate-800 mb-2">No Analysis Yet</h2>
-        <p className="text-slate-500 text-sm mb-6">Take a photo to get your repair plan.</p>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">No Analysis Yet</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Take a photo to get your repair plan.</p>
         <Link to="/" className="px-6 py-3 bg-brand-600 text-white font-semibold rounded-2xl shadow-sm">
           Go to Camera
         </Link>
@@ -164,8 +164,8 @@ export default function AnalysisPage() {
           {allComplete && (
             <div className="text-center py-8 animate-scale-in">
               <div className="text-5xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Project Complete!</h2>
-              <p className="text-slate-500 mb-4">You saved an estimated {analysisResult.estimatedCost} in labor costs.</p>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Project Complete!</h2>
+              <p className="text-slate-500 dark:text-slate-400 mb-4">You saved an estimated {analysisResult.estimatedCost} in labor costs.</p>
               <button onClick={() => setFocusMode(false)} className="px-6 py-3 bg-brand-600 text-white rounded-2xl font-semibold">
                 View Summary
               </button>
@@ -191,7 +191,7 @@ export default function AnalysisPage() {
               <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed mt-4 mb-4">{step.description}</p>
 
               {step.tip && (
-                <div className="p-4 bg-brand-50 border border-brand-200 rounded-2xl text-sm text-brand-800 mb-6">
+                <div className="p-4 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-2xl text-sm text-brand-800 dark:text-brand-300 mb-6">
                   <strong>Pro tip:</strong> {step.tip}
                 </div>
               )}
@@ -258,8 +258,8 @@ export default function AnalysisPage() {
 
           <div className="flex flex-wrap gap-2 mb-4">
             <DifficultyBadge level={analysisResult.difficulty} />
-            <Badge color="text-slate-600" bg="bg-slate-100">{analysisResult.estimatedTime}</Badge>
-            <Badge color="text-emerald-700" bg="bg-emerald-50">{analysisResult.estimatedCost}</Badge>
+            <Badge color="text-slate-600 dark:text-slate-300" bg="bg-slate-100 dark:bg-slate-700">{analysisResult.estimatedTime}</Badge>
+            <Badge color="text-emerald-700 dark:text-emerald-300" bg="bg-emerald-50 dark:bg-emerald-900/30">{analysisResult.estimatedCost}</Badge>
           </div>
 
           {/* Video recommendation */}
@@ -289,9 +289,9 @@ export default function AnalysisPage() {
           )}
 
           {analysisResult.safetyWarnings.length > 0 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl mb-4">
-              <div className="text-sm font-semibold text-red-800 mb-1">Safety Warnings</div>
-              <ul className="text-xs text-red-700 space-y-0.5">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mb-4">
+              <div className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">Safety Warnings</div>
+              <ul className="text-xs text-red-700 dark:text-red-400 space-y-0.5">
                 {analysisResult.safetyWarnings.map((w, i) => <li key={i}>• {w}</li>)}
               </ul>
             </div>
@@ -368,7 +368,7 @@ export default function AnalysisPage() {
           <div className="space-y-4">
             <ContractorPreview category={analysisResult.category} />
             <Link to="/contractors" className="block">
-              <button className="w-full py-3 bg-white border border-slate-200 text-slate-600 font-semibold rounded-2xl transition-all active:scale-[0.97]">
+              <button className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded-2xl transition-all active:scale-[0.97]">
                 See All Contractors
               </button>
             </Link>
@@ -454,7 +454,7 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
 
       {/* Video link */}
       <Link to="/videos" className="block mt-4">
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex items-center gap-3 shadow-sm transition-all active:scale-[0.98]">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 flex items-center gap-3 shadow-sm transition-all active:scale-[0.98]">
           <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
             <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
               <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
@@ -462,7 +462,7 @@ function GuideTab({ steps, completedSteps, onToggleStep, onStartFocus }: {
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100">Watch Repair Videos</h4>
-            <p className="text-xs text-slate-400">See how others fixed this</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">See how others fixed this</p>
           </div>
           <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />

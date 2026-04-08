@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Brain, FileText, Wrench } from 'lucide-react';
 
 const STAGES = [
-  { label: 'Examining photo...', icon: '🔍', duration: 2500 },
-  { label: 'Identifying the problem...', icon: '🧠', duration: 3000 },
-  { label: 'Building your repair plan...', icon: '📋', duration: 3500 },
-  { label: 'Finding tools & materials...', icon: '🔧', duration: 2000 },
+  { label: 'Examining photo...', icon: Search, duration: 2500 },
+  { label: 'Identifying the problem...', icon: Brain, duration: 3000 },
+  { label: 'Building your repair plan...', icon: FileText, duration: 3500 },
+  { label: 'Finding tools & materials...', icon: Wrench, duration: 2000 },
 ];
 
 export default function AnalysisLoader() {
@@ -19,7 +21,6 @@ export default function AnalysisLoader() {
       elapsed += 50;
       setProgress(Math.min((elapsed / totalDuration) * 100, 95));
 
-      // Advance stage
       let accumulated = 0;
       for (let i = 0; i < STAGES.length; i++) {
         accumulated += STAGES[i].duration;
@@ -34,38 +35,62 @@ export default function AnalysisLoader() {
   }, []);
 
   const stage = STAGES[stageIndex];
+  const Icon = stage.icon;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900/95 flex flex-col items-center justify-center px-8">
-      {/* Pulsing icon */}
-      <div className="text-5xl mb-8 animate-pulse-soft">{stage.icon}</div>
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] glass-dark flex flex-col items-center justify-center px-8 backdrop-blur-2xl bg-slate-900/80"
+    >
+      <div className="relative w-24 h-24 mb-10 flex items-center justify-center">
+        {/* Glow rings */}
+        <motion.div 
+          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }} 
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} 
+          className="absolute inset-0 bg-brand-500 rounded-full blur-xl"
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }} 
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }} 
+          className="absolute inset-2 bg-brand-400 rounded-full blur-md"
+        />
+        
+        <div className="relative w-16 h-16 bg-slate-800 border-2 border-brand-400 rounded-2xl flex items-center justify-center shadow-glass-dark overflow-hidden z-10">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={stageIndex}
+              initial={{ scale: 0.5, opacity: 0, rotate: -90 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 1.5, opacity: 0, rotate: 90 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+            >
+              <Icon className="w-8 h-8 text-white" />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
 
-      {/* Stage label */}
-      <p className="text-white text-lg font-semibold mb-2 animate-fade-in" key={stageIndex}>
-        {stage.label}
-      </p>
+      <AnimatePresence mode="wait">
+        <motion.p 
+          key={stageIndex}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -10, opacity: 0 }}
+          className="text-white text-xl font-bold mb-8 text-center drop-shadow-md"
+        >
+          {stage.label}
+        </motion.p>
+      </AnimatePresence>
 
-      {/* Progress bar */}
-      <div className="w-full max-w-xs h-1.5 bg-slate-700 rounded-full overflow-hidden mb-4">
-        <div
-          className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-200 ease-out"
-          style={{ width: `${progress}%` }}
+      <div className="w-full max-w-xs h-2 bg-slate-800/80 rounded-full overflow-hidden shadow-inset-dark p-0.5">
+        <motion.div
+          className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)]"
+          animate={{ width: `${progress}%` }}
+          transition={{ ease: "linear", duration: 0.1 }}
         />
       </div>
-
-      {/* Stage dots */}
-      <div className="flex gap-2">
-        {STAGES.map((_, i) => (
-          <div
-            key={i}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              i < stageIndex ? 'bg-brand-400' :
-              i === stageIndex ? 'bg-brand-500 scale-125' :
-              'bg-slate-600'
-            }`}
-          />
-        ))}
-      </div>
-    </div>
+    </motion.div>
   );
 }

@@ -82,9 +82,9 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
   };
 
   const verdictStyles = {
-    good: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', icon: '✓', label: 'Looks Good' },
-    warning: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', icon: '⚠', label: 'Minor Suggestions' },
-    issue: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: '✕', label: 'Needs Attention' },
+    good: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-300', icon: '✓', label: 'Looks Good' },
+    warning: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-800 dark:text-amber-300', icon: '⚠', label: 'Minor Suggestions' },
+    issue: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-800 dark:text-red-300', icon: '✕', label: 'Needs Attention' },
   };
 
   return (
@@ -98,7 +98,7 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
         <div className="flex gap-2">
           <button
             onClick={() => photoRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-2xl transition-all active:scale-[0.97] text-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-2xl transition-all active:scale-[0.97] text-sm"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -112,7 +112,7 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
       {/* Preview: show photo + verify button */}
       {status === 'preview' && preview && (
         <div className="space-y-3 animate-fade-in">
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video">
             <img src={preview} alt="Your work" className="w-full h-full object-cover" />
             <button
               onClick={handleReset}
@@ -140,10 +140,10 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
         <div className="flex flex-col items-center py-6 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-slate-600">Checking your work...</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Checking your work...</span>
           </div>
           {preview && (
-            <div className="w-32 h-20 rounded-xl overflow-hidden border border-slate-200 mt-2 opacity-60">
+            <div className="w-32 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 mt-2 opacity-60">
               <img src={preview} alt="Checking" className="w-full h-full object-cover" />
             </div>
           )}
@@ -154,7 +154,7 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
       {status === 'result' && result && (
         <div className="space-y-3 animate-slide-up">
           {preview && (
-            <div className="w-full rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+            <div className="w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video">
               <img src={preview} alt="Your work" className="w-full h-full object-cover" />
             </div>
           )}
@@ -170,21 +170,21 @@ Be specific and practical. If it looks good, say so clearly. If there are issues
           </div>
 
           {/* AI feedback */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4">
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{result.message}</p>
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+            <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">{result.message}</p>
           </div>
 
           {/* Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleReset}
-              className="flex-1 py-3 bg-slate-100 text-slate-600 font-medium rounded-2xl text-sm transition-all active:scale-[0.97]"
+              className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium rounded-2xl text-sm transition-all active:scale-[0.97]"
             >
               Retake Photo
             </button>
             <button
               onClick={() => photoRef.current?.click()}
-              className="flex-1 py-3 bg-slate-100 text-slate-600 font-medium rounded-2xl text-sm transition-all active:scale-[0.97]"
+              className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium rounded-2xl text-sm transition-all active:scale-[0.97]"
             >
               Check Again
             </button>
