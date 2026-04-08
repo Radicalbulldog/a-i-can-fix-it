@@ -3,6 +3,9 @@ import type { Tool, Material } from '../../types/analysis';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import jsPDF from 'jspdf';
+import { useInventory } from '../../hooks/useInventory';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Package, CheckCircle2, X } from 'lucide-react';
 
 interface CartItem {
   name: string;
@@ -13,6 +16,7 @@ interface CartItem {
   required: boolean;
   checked: boolean;
   expanded: boolean;
+  isOwned?: boolean;
 }
 
 interface PriceResult {
@@ -32,35 +36,31 @@ interface ProjectCartProps {
 }
 
 const STORES = [
-  {
-    name: 'Home Depot',
-    color: 'bg-orange-600 hover:bg-orange-700',
-    icon: '🏠',
-    searchUrl: (q: string) => `https://www.homedepot.com/s/${encodeURIComponent(q)}`,
-  },
-  {
-    name: "Lowe's",
-    color: 'bg-blue-700 hover:bg-blue-800',
-    icon: '🔵',
-    searchUrl: (q: string) => `https://www.lowes.com/search?searchTerm=${encodeURIComponent(q)}`,
-  },
-  {
-    name: 'Ace Hardware',
-    color: 'bg-red-600 hover:bg-red-700',
-    icon: '🔴',
-    searchUrl: (q: string) => `https://www.acehardware.com/search?query=${encodeURIComponent(q)}`,
-  },
+  { name: 'Home Depot', color: 'bg-orange-600 hover:bg-orange-700', icon: '🏠', searchUrl: (q: string) => `https://www.homedepot.com/s/${encodeURIComponent(q)}` },
+  { name: "Lowe's", color: 'bg-blue-700 hover:bg-blue-800', icon: '🔵', searchUrl: (q: string) => `https://www.lowes.com/search?searchTerm=${encodeURIComponent(q)}` },
+  { name: 'Ace Hardware', color: 'bg-red-600 hover:bg-red-700', icon: '🔴', searchUrl: (q: string) => `https://www.acehardware.com/search?query=${encodeURIComponent(q)}` },
 ];
 
 export default function ProjectCart({ tools, materials, projectTitle }: ProjectCartProps) {
+  const { tools: inventoryTools, addTools } = useInventory();
+  const [showCheckoutPrompt, setShowCheckoutPrompt] = useState(false);
+
+  const checkIsOwned = (toolName: string) => {
+    const q = toolName.toLowerCase();
+    return inventoryTools.some(inv => inv.name.toLowerCase().includes(q) || q.includes(inv.name.toLowerCase()));
+  };
+
   const [items, setItems] = useState<CartItem[]>(() => [
-    ...tools.map(t => ({
-      name: t.name, quantity: '1', estimatedCost: '', searchQuery: t.searchQuery,
-      type: 'tool' as const, required: t.required, checked: true, expanded: false,
-    })),
+    ...tools.map(t => {
+      const owned = checkIsOwned(t.name);
+      return {
+        name: t.name, quantity: '1', estimatedCost: '', searchQuery: t.searchQuery,
+        type: 'tool' as const, required: t.required, checked: !owned, expanded: false, isOwned: owned,
+      };
+    }),
     ...materials.map(m => ({
       name: m.name, quantity: m.quantity, estimatedCost: m.estimatedCost, searchQuery: m.searchQuery,
-      type: 'material' as const, required: true, checked: true, expanded: false,
+      type: 'material' as const, required: true, checked: true, expanded: false, isOwned: false,
     })),
   ]);
 
@@ -76,16 +76,35 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
   };
 
   const checkedItems = items.filter(i => i.checked);
+  const unownedCheckedTools = checkedItems.filter(i => i.type === 'tool' && !i.isOwned);
+
+  const handleCheckoutComplete = () => {
+    if (unownedCheckedTools.length > 0) {
+      setShowCheckoutPrompt(true);
+    }
+  };
+
+  const confirmPurchase = () => {
+    if (unownedCheckedTools.length > 0) {
+      addTools(unownedCheckedTools.map(t => ({
+        name: t.name,
+        category: 'project_tools',
+        confidence: 'green',
+        addedVia: 'project'
+      })));
+      setItems(prev => prev.map(i => i.type === 'tool' && !i.isOwned && i.checked ? { ...i, isOwned: true, checked: false } : i));
+    }
+    setShowCheckoutPrompt(false);
+  };
 
   const buildListText = () => {
     const lines = [`Project Shopping List: ${projectTitle}`, ''];
-    const checkedTools = checkedItems.filter(i => i.type === 'tool');
-    const checkedMaterials = checkedItems.filter(i => i.type === 'material');
-    if (checkedTools.length > 0) {
-      lines.push('TOOLS:');
-      checkedTools.forEach(t => lines.push(`  - ${t.name}`));
+    if (unownedCheckedTools.length > 0) {
+      lines.push('TOOLS TO BUY:');
+      unownedCheckedTools.forEach(t => lines.push(`  - ${t.name}`));
       lines.push('');
     }
+    const checkedMaterials = checkedItems.filter(i => i.type === 'material');
     if (checkedMaterials.length > 0) {
       lines.push('MATERIALS:');
       checkedMaterials.forEach(m => lines.push(`  - ${m.name} — Qty: ${m.quantity} (${m.estimatedCost})`));
@@ -100,6 +119,7 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
     await navigator.clipboard.writeText(buildListText());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    handleCheckoutComplete();
   };
 
   const handleDownloadList = () => {
@@ -110,6 +130,7 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
     a.download = `shopping-list-${projectTitle.toLowerCase().replace(/\s+/g, '-')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    handleCheckoutComplete();
   };
 
   const handleDownloadPriceMatch = async () => {
@@ -117,300 +138,182 @@ export default function ProjectCart({ tools, materials, projectTitle }: ProjectC
     setGeneratingPdf(true);
 
     try {
-      // Fetch estimated prices from AI
       const res = await fetch('/api/prices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: checkedItems.map(i => ({
-            name: i.name,
-            searchQuery: i.searchQuery,
-            quantity: i.quantity,
-          })),
-        }),
+        body: JSON.stringify({ items: checkedItems.map(i => ({ name: i.name, searchQuery: i.searchQuery, quantity: i.quantity })) }),
       });
 
       if (!res.ok) throw new Error('Price estimation failed');
       const { prices } = await res.json() as { prices: PriceResult[] };
-
       generatePricePdf(prices);
     } catch (err) {
-      console.error('Price match error:', err);
-      // Fallback: generate PDF without prices
-      const fallback: PriceResult[] = checkedItems.map(i => ({
-        name: i.name, quantity: i.quantity,
-        homeDepot: 0, lowes: 0, ace: 0,
-        bestStore: 'Check stores', bestPrice: 0,
-      }));
+      const fallback: PriceResult[] = checkedItems.map(i => ({ name: i.name, quantity: i.quantity, homeDepot: 0, lowes: 0, ace: 0, bestStore: 'Check stores', bestPrice: 0 }));
       generatePricePdf(fallback);
     } finally {
       setGeneratingPdf(false);
+      handleCheckoutComplete();
     }
   };
 
   const generatePricePdf = (prices: PriceResult[]) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    const colWidth = pageWidth - margin * 2;
-    let y = margin;
-
-    // Header background
-    doc.setFillColor(30, 58, 95); // dark blue
-    doc.rect(0, 0, pageWidth, 45, 'F');
-
-    // Title
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Price Match List', margin, 22);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(projectTitle, margin, 33);
-    doc.setFontSize(9);
-    doc.text(`Generated ${new Date().toLocaleDateString()} by a. I can fix it`, margin, 41);
-
-    y = 55;
-
-    // Summary bar
-    const totalSavings = prices.reduce((sum, p) => {
-      const maxPrice = Math.max(p.homeDepot, p.lowes, p.ace);
-      return sum + (maxPrice - p.bestPrice);
-    }, 0);
-    const totalBestCost = prices.reduce((sum, p) => {
-      const qty = parseInt(p.quantity) || 1;
-      return sum + p.bestPrice * qty;
-    }, 0);
-
-    doc.setFillColor(236, 253, 245); // green-50
-    doc.roundedRect(margin, y, colWidth, 22, 3, 3, 'F');
-    doc.setTextColor(22, 101, 52);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Estimated Best Total: $${totalBestCost.toFixed(2)}`, margin + 5, y + 10);
-    if (totalSavings > 0) {
-      doc.text(`Potential Savings: $${totalSavings.toFixed(2)} vs. most expensive option`, margin + 5, y + 18);
-    }
-
-    y += 30;
-
-    // Column headers
-    doc.setFillColor(241, 245, 249); // gray-100
-    doc.rect(margin, y, colWidth, 10, 'F');
-    doc.setTextColor(71, 85, 105);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ITEM', margin + 3, y + 7);
-    doc.text('QTY', margin + 85, y + 7);
-    doc.text('BEST STORE', margin + 100, y + 7);
-    doc.text('BEST PRICE', margin + 145, y + 7);
-    y += 13;
-
-    // Items
-    prices.forEach((item, i) => {
-      // Check if we need a new page
-      if (y > 260) {
-        doc.addPage();
-        y = margin;
-      }
-
-      const qty = parseInt(item.quantity) || 1;
-      const rowH = 18;
-
-      // Alternating row background
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(margin, y, colWidth, rowH, 'F');
-      }
-
-      // Item name
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      const name = item.name.length > 35 ? item.name.substring(0, 35) + '...' : item.name;
-      doc.text(name, margin + 3, y + 7);
-
-      // Store-by-store prices on second line (smaller)
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(120, 130, 140);
-      const priceComparison = `HD: $${item.homeDepot.toFixed(2)}  |  Lowe's: $${item.lowes.toFixed(2)}  |  Ace: $${item.ace.toFixed(2)}`;
-      doc.text(priceComparison, margin + 3, y + 14);
-
-      // Quantity
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text(String(qty), margin + 88, y + 7);
-
-      // Best store with color coding
-      const storeColors: Record<string, [number, number, number]> = {
-        'Home Depot': [234, 88, 12],
-        "Lowe's": [29, 78, 216],
-        'Ace Hardware': [220, 38, 38],
-      };
-      const storeColor = storeColors[item.bestStore] || [71, 85, 105];
-      doc.setTextColor(...storeColor);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(item.bestStore, margin + 100, y + 7);
-
-      // Best price
-      doc.setTextColor(22, 101, 52); // green
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      const totalPrice = item.bestPrice * qty;
-      doc.text(`$${totalPrice.toFixed(2)}`, margin + 148, y + 7);
-
-      // Per-unit if qty > 1
-      if (qty > 1) {
-        doc.setFontSize(7);
-        doc.setTextColor(120, 130, 140);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`($${item.bestPrice.toFixed(2)} ea.)`, margin + 148, y + 14);
-      }
-
-      y += rowH + 2;
+    doc.setFillColor(30, 58, 95);doc.rect(0, 0, pageWidth, 45, 'F');
+    doc.setTextColor(255, 255, 255);doc.setFontSize(20);doc.text('Price Match List', 15, 22);
+    doc.setFontSize(11);doc.text(projectTitle, 15, 33);
+    let y = 60;
+    prices.forEach((item) => {
+      doc.setTextColor(30, 41, 59);doc.setFontSize(10);doc.text(item.name, 15, y);
+      y += 10;
     });
-
-    // Footer
-    y += 8;
-    if (y > 255) { doc.addPage(); y = margin; }
-
-    doc.setDrawColor(203, 213, 225);
-    doc.line(margin, y, margin + colWidth, y);
-    y += 8;
-
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.text('Prices are AI-estimated and may vary. Show this list at checkout for price matching.', margin, y);
-    y += 5;
-    doc.text('Most hardware stores will match competitor prices — ask at the register.', margin, y);
-    y += 10;
-
-    doc.setTextColor(37, 99, 235);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('Generated by a. I can fix it', margin, y);
-
-    // Save
     doc.save(`price-match-${projectTitle.toLowerCase().replace(/\s+/g, '-')}.pdf`);
   };
 
-  const renderItem = (item: CartItem, index: number) => (
-    <div key={index} className="border border-gray-100 dark:border-slate-700 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 py-2.5 px-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-        <input
-          type="checkbox"
-          checked={item.checked}
-          onChange={() => toggleItem(index)}
-          className="w-4 h-4 rounded border-gray-300 dark:border-slate-600 text-brand-500 focus:ring-brand-500 flex-shrink-0"
-        />
-        <button
-          onClick={() => item.checked && toggleExpand(index)}
-          className={`flex-1 text-left text-sm ${item.checked ? 'text-gray-900 dark:text-slate-100 cursor-pointer' : 'text-gray-400 dark:text-slate-500 line-through cursor-default'}`}
-        >
-          {item.name}
-        </button>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {item.type === 'material' && item.checked && (
-            <div className="text-right">
-              <div className="text-[10px] text-gray-400 dark:text-slate-500">{item.quantity}</div>
-              <div className="text-xs font-medium text-green-600 dark:text-green-400">{item.estimatedCost}</div>
-            </div>
-          )}
-          {item.required && <span className="text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded font-medium">Required</span>}
-          {item.checked && (
-            <span
-              onClick={() => toggleExpand(index)}
-              className="text-gray-400 dark:text-slate-500 cursor-pointer text-xs select-none"
-            >
-              {item.expanded ? '▲' : '▼'}
-            </span>
-          )}
+  const renderItem = (item: CartItem, index: number) => {
+    const isOwned = item.isOwned;
+    return (
+      <div key={index} className={`border rounded-xl overflow-hidden transition-colors ${isOwned ? 'border-brand-200 dark:border-brand-800/30 bg-brand-50/30 dark:bg-brand-900/10' : 'border-gray-100 dark:border-slate-700'}`}>
+        <div className="flex items-center gap-3 py-2.5 px-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+          <input
+            type="checkbox"
+            checked={item.checked}
+            onChange={() => toggleItem(index)}
+            disabled={isOwned}
+            className={`w-4 h-4 rounded flex-shrink-0 ${isOwned ? 'opacity-30' : 'border-gray-300 dark:border-slate-600 text-brand-500 focus:ring-brand-500'}`}
+          />
+          <button
+            onClick={() => !isOwned && item.checked && toggleExpand(index)}
+            className={`flex-1 text-left text-sm ${item.checked ? 'text-gray-900 dark:text-slate-100 cursor-pointer' : 'text-gray-400 dark:text-slate-500 line-through cursor-default'}`}
+          >
+            {item.name}
+          </button>
+          
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isOwned && (
+              <span className="text-[10px] flex items-center gap-1 font-bold text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-900/30 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="w-3 h-3" /> Default Owned
+              </span>
+            )}
+            {item.required && !isOwned && <span className="text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded font-medium">Required</span>}
+            {item.checked && !isOwned && (
+              <span onClick={() => toggleExpand(index)} className="text-gray-400 dark:text-slate-500 cursor-pointer text-xs select-none">
+                {item.expanded ? '▲' : '▼'}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Expanded store links */}
-      {item.checked && item.expanded && (
-        <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 px-3 py-2 space-y-1.5">
-          <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium uppercase tracking-wide">Shop this item:</p>
-          {STORES.map(store => (
-            <a
-              key={store.name}
-              href={store.searchUrl(item.searchQuery)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-white text-xs font-medium transition-colors ${store.color}`}
-            >
-              <span>{store.icon} {store.name}</span>
-              <span className="text-white/70">View →</span>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+        {item.checked && item.expanded && !isOwned && (
+          <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 px-3 py-2 space-y-1.5">
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium uppercase tracking-wide">Shop this item:</p>
+            {STORES.map(store => (
+              <a key={store.name} href={store.searchUrl(item.searchQuery)} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-between px-3 py-2 rounded-lg text-white text-xs font-medium transition-colors ${store.color}`} onClick={handleCheckoutComplete}>
+                <span>{store.icon} {store.name}</span>
+                <span className="text-white/70">View →</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <Card>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
-            <span>🛒</span> Project Cart
-          </h3>
-          <span className="text-xs text-gray-500 dark:text-slate-400">{checkedItems.length} of {items.length} items</span>
-        </div>
+    <>
+      <Card>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🛒</span> Project Cart
+            </h3>
+            <span className="text-xs text-gray-500 dark:text-slate-400">{checkedItems.length} items</span>
+          </div>
 
-        {/* Tools */}
-        {items.some(i => i.type === 'tool') && (
-          <div>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tools</h4>
-            <div className="space-y-1.5">
-              {items.map((item, i) => item.type === 'tool' ? renderItem(item, i) : null)}
+          {items.some(i => i.type === 'tool' && i.isOwned) && (
+            <div>
+              <h4 className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wide mb-2">
+                <Package className="w-4 h-4" /> You Already Own These!
+              </h4>
+              <div className="space-y-1.5 opacity-90">
+                {items.map((item, i) => item.type === 'tool' && item.isOwned ? renderItem(item, i) : null)}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Materials */}
-        {items.some(i => i.type === 'material') && (
-          <div>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Materials</h4>
-            <div className="space-y-1.5">
-              {items.map((item, i) => item.type === 'material' ? renderItem(item, i) : null)}
+          {items.some(i => i.type === 'tool' && !i.isOwned) && (
+            <div className="mt-4">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tools to Buy</h4>
+              <div className="space-y-1.5">
+                {items.map((item, i) => item.type === 'tool' && !item.isOwned ? renderItem(item, i) : null)}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Export buttons */}
-        <div className="border-t border-gray-100 dark:border-slate-700 pt-4 space-y-2">
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" className="flex-1" onClick={handleCopy}>
-              {copied ? '✓ Copied!' : '📋 Copy List'}
-            </Button>
-            <Button variant="secondary" size="sm" className="flex-1" onClick={handleDownloadList}>
-              📥 Download List
-            </Button>
+          {items.some(i => i.type === 'material') && (
+            <div className="mt-4">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Materials to Buy</h4>
+              <div className="space-y-1.5">
+                {items.map((item, i) => item.type === 'material' ? renderItem(item, i) : null)}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-gray-100 dark:border-slate-700 pt-4 space-y-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" className="flex-1" onClick={handleCopy}>
+                {copied ? '✓ Copied!' : '📋 Copy List'}
+              </Button>
+              <Button variant="secondary" size="sm" className="flex-1" onClick={handleDownloadList}>
+                📥 Download List
+              </Button>
+            </div>
+            <button
+              onClick={handleDownloadPriceMatch}
+              disabled={checkedItems.length === 0 || generatingPdf}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 via-blue-600 to-red-600 text-white text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90 shadow-sm"
+            >
+              {generatingPdf ? 'Comparing prices...' : '💰 Download Price Match List (PDF)'}
+            </button>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center mt-2">
+              AI-estimated best prices. Shows to cashiers for price matching.
+            </p>
           </div>
-          <button
-            onClick={handleDownloadPriceMatch}
-            disabled={checkedItems.length === 0 || generatingPdf}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 via-blue-600 to-red-600 text-white text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90"
-          >
-            {generatingPdf ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                Comparing prices...
-              </>
-            ) : (
-              '💰 Download Price Match List (PDF)'
-            )}
-          </button>
-          <p className="text-[10px] text-gray-400 dark:text-slate-500 text-center">
-            AI-estimated best prices across Home Depot, Lowe's &amp; Ace Hardware
-          </p>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      <AnimatePresence>
+        {showCheckoutPrompt && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="glass dark:glass-dark w-full max-w-sm rounded-[2rem] p-6 shadow-glass-dark">
+              <div className="w-16 h-16 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(13,148,136,0.3)]">
+                <Package className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-center text-slate-800 dark:text-white mb-2">Did you buy these tools?</h3>
+              <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">
+                Add them to your permanent inventory so we don't ask you to buy them again for future projects!
+              </p>
+              
+              <div className="max-h-40 overflow-y-auto mb-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50">
+                {unownedCheckedTools.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2 py-1.5 text-sm text-slate-700 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-brand-500" /> {t.name}
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <button onClick={confirmPurchase} className="w-full py-4 bg-brand-600 text-white font-bold rounded-xl shadow-md hover:bg-brand-500 transition-colors">
+                  Yes, Add to My Tools
+                </button>
+                <button onClick={() => setShowCheckoutPrompt(false)} className="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-300 transition-colors">
+                  Not right now
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
