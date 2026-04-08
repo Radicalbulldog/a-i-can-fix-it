@@ -9,8 +9,13 @@ export async function analyzeMedia(files: File[], context?: string): Promise<Rep
 
   const res = await fetch('/api/analyze', { method: 'POST', body: formData });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Analysis failed' }));
-    throw new Error(err.error);
+    const text = await res.text();
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.detail ? `\${err.error}: \${err.detail}` : err.error);
+    } catch {
+      throw new Error(`Server Error (\${res.status}): \${text.substring(0, 80)}`);
+    }
   }
   return res.json();
 }
