@@ -12,9 +12,9 @@ export async function analyzeMedia(files: File[], context?: string): Promise<Rep
     const text = await res.text();
     try {
       const err = JSON.parse(text);
-      throw new Error(err.detail ? `\${err.error}: \${err.detail}` : err.error);
+      throw new Error(err.detail ? `${err.error}: ${err.detail}` : err.error);
     } catch {
-      throw new Error(`Server Error (\${res.status}): \${text.substring(0, 80)}`);
+      throw new Error(`Server Error (${res.status}): ${text.substring(0, 80)}...`);
     }
   }
   return res.json();
