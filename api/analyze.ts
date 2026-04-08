@@ -129,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       imageContent.push({
         type: 'text',
         text: additionalContext
-          ? \`User's additional context: \${additionalContext}\\n\\nAnalyze this home repair issue and respond with JSON only.\`
+          ? `User's additional context: ${additionalContext}\n\nAnalyze this home repair issue and respond with JSON only.`
           : 'Analyze this home repair issue and respond with JSON only.'
       });
 
@@ -151,19 +151,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }));
 
       const promptText = additionalContext
-        ? \`\${SYSTEM_PROMPT}\\n\\nUser's additional context: \${additionalContext}\\n\\nAnalyze this home repair issue and respond with JSON only.\`
-        : \`\${SYSTEM_PROMPT}\\n\\nAnalyze this home repair issue and respond with JSON only.\`;
+        ? `${SYSTEM_PROMPT}\n\nUser's additional context: ${additionalContext}\n\nAnalyze this home repair issue and respond with JSON only.`
+        : `${SYSTEM_PROMPT}\n\nAnalyze this home repair issue and respond with JSON only.`;
 
       const result = await model.generateContent([promptText, ...imageParts]);
       jsonStr = result.response.text();
     }
 
     // Extract JSON from response
-    const jsonMatch = jsonStr.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/);
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) jsonStr = jsonMatch[1].trim();
 
-    // Minor fix: if it starts with ``` it might miss regex if malformed, clean it a bit just in case.
-    if (jsonStr.startsWith('\`\`\`')) jsonStr = jsonStr.replace(/\`\`\`(?:json)?/g, '').replace(/\`\`\`/g, '');
+    if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/```(?:json)?/g, '').replace(/```/g, '');
 
     const analysis = JSON.parse(jsonStr);
     res.json(analysis);
