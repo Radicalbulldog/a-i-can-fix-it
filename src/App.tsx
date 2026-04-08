@@ -6,6 +6,7 @@ import AnalysisPage from './pages/AnalysisPage';
 import VideosPage from './pages/VideosPage';
 import ContractorsPage from './pages/ContractorsPage';
 import InventoryPage from './pages/InventoryPage';
+import AuthPage from './pages/AuthPage';
 import { useDarkMode } from './hooks/useDarkMode';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route path="/videos" element={<VideosPage />} />
         <Route path="/contractors" element={<ContractorsPage />} />
       </Routes>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-
+import { User } from 'lucide-react';
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/analysis', label: 'Analysis' },
@@ -46,6 +46,10 @@ export default function Header({ dark, onToggleDark }: HeaderProps) {
               </Link>
             ))}
           </nav>
+
+          <Link to="/auth" className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <User className="w-5 h-5" />
+          </Link>
 
           {/* Dark mode toggle */}
           <button
